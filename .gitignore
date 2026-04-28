@@ -1,0 +1,72 @@
+# =============================================================================
+# Unity / IDE generated — never commit these
+# =============================================================================
+
+# Unity build / cache
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+[Aa]ssets/[Aa]sset[Ss]tore[Tt]ools*
+
+# Unity auto-generated solution / project files (Rider/VS regenerate from .meta)
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Asset meta data should be checked in, but Unity sometimes leaves stragglers
+# in ignored folders. Per-folder ignore covers Library/Temp meta noise.
+sysinfo.txt
+
+# Crashlogs / profiles
+crashlytics-build.properties
+*.apk
+*.aab
+*.unitypackage
+
+# Recordings
+[Rr]ecordings/
+
+# =============================================================================
+# OS noise
+# =============================================================================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =============================================================================
+# Editor / IDE
+# =============================================================================
+.vs/
+.idea/
+.vscode/
+ExportedObj/
+*.swp
+*.bak
+
+# =============================================================================
+# Mythfall specifics
+# =============================================================================
+# Local-only handoff notes the user might keep alongside committed HANDOFF.md
+HANDOFF_LOCAL.md
+
+# =============================================================================
+# Third-party Asset Store content — re-import from Asset Store, do not redistribute
+# =============================================================================
+[Aa]ssets/Layer Lab/
+[Aa]ssets/Layer Lab.meta

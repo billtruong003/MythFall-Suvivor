@@ -1,0 +1,9 @@
+﻿<Solution>
+  <Project Path="BillInspector.Runtime.csproj" />
+  <Project Path="BillInspector.Editor.csproj" />
+  <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="BillGameCore.BillFav.csproj" />
+  <Project Path="BillInspector.Editor.Tests.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="BillGameCore.BillSceneSwitcher.csproj" />
+</Solution>
