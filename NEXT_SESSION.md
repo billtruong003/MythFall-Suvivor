@@ -108,22 +108,20 @@ Day 2 test bằng cách Play **trực tiếp từ GameplayScene** — Bill auto-
 
 Nếu mày Play từ BootstrapScene trực tiếp → splash → MenuScene trống (không có gì để click). Đó là expected, Day 3 sẽ thêm UI.
 
-### B.1 — Setup test scene
-- [ ] Mở `Assets/Mythfall/Scenes/GameplayScene.unity`
-- [ ] Trong Hierarchy, drag `Kai.prefab` vào scene → vị trí (0, 0, 0)
-- [ ] Drag thêm 3-4 `Swarmer.prefab` vào scene, vị trí cách Kai 3-5m, ví dụ:
-  - Swarmer 1: (3, 0, 0)
-  - Swarmer 2: (-3, 0, 2)
-  - Swarmer 3: (0, 0, 5)
-- [ ] **Quan trọng:** thêm 1 plane đơn giản làm sàn (`GameObject → 3D Object → Plane`, scale 5,1,5, position 0,0,0). Lý do: CharacterController cần ground để detect.
-- [ ] Plane phải set Layer = Default (đã sẵn)
-- [ ] Camera: dùng Main Camera có sẵn, position (0, 8, -8), rotation (45, 0, 0) để thấy được sàn + nhân vật từ trên
-- [ ] Save scene (`Ctrl+S`)
+### B.1 — Auto-build test scene
+- [ ] Menu bar → `Tools → Mythfall → Sprint 2 — Setup GameplayScene for Test`
+- [ ] Console expected:
+  ```
+  [Sprint2Setup] GameplayScene populated: plane + light + Main Camera + Kai + 4 Swarmers. Press Play (from this scene) to test combat loop.
+  ```
+- [ ] Hierarchy giờ có:
+  - `[TestSetup]` (chứa Ground plane + Directional Light)
+  - `Main Camera` (đã reposition top-down)
+  - `Kai` (instance từ prefab, position 0,0,0)
+  - `Swarmer_1` đến `Swarmer_4` (positions ~4m quanh Kai)
+- [ ] Verify Kai → Inspector → `CharacterLocomotion → Ground Layer` = `Default` (script auto-set)
 
-### B.2 — Verify CharacterLocomotion ground layer
-- [ ] Click Kai trong Hierarchy → Inspector → CharacterLocomotion component
-- [ ] Field `Ground Layer` → set thành `Default` (hoặc layer của plane mày tạo)
-- [ ] Save scene
+### B.2 — (skipped — ground layer set automatically by B.1)
 
 ### B.3 — Press Play (chạy từ GameplayScene)
 > GameplayScene phải đang là active scene khi mày press Play.
