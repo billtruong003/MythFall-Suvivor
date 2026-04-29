@@ -24,13 +24,9 @@ namespace Mythfall.Core
 
         void Awake()
         {
-            // === Register Mythfall services in Awake (not via BillStartup steps) ===
-            // Why: BillStartup runs its steps inside a coroutine that includes ~1.5s of logo
-            // animation. In editor-bounce mode (Play from non-bootstrap scene), Bill's Phase2
-            // editor-return fires Bill.Scene.Load() immediately after GameReadyEvent — that
-            // scene transition completes (~0.5s) before BillStartup's logo finishes, killing
-            // the coroutine and skipping all steps. By registering here in Awake we guarantee
-            // services are available regardless of scene-transition timing.
+            Debug.Log($"[GameBootstrap] Awake fired @ frame={Time.frameCount} BillReady={Bill.IsReady} sceneCount={UnityEngine.SceneManagement.SceneManager.sceneCount} activeScene={UnityEngine.SceneManagement.SceneManager.GetActiveScene().name}");
+
+            // Register Localization (no Bill deps — just JSON + PlayerPrefs)
             if (!ServiceLocator.Has<LocalizationService>())
             {
                 ServiceLocator.Register(new LocalizationService());
@@ -38,26 +34,28 @@ namespace Mythfall.Core
                 Debug.Log($"[GameBootstrap] LocalizationService registered, language: {loc.CurrentLanguage}");
             }
 
+            // Pool registration: try now if Bill ready (editor bounce flow), else defer
+            TryRegisterPools("Awake");
+
+            // Configure BillStartup splash
             if (startup == null) startup = GetComponent<BillStartup>();
             if (startup == null)
             {
-                Debug.LogError("[GameBootstrap] BillStartup component missing. Re-run Tools → Mythfall → Sprint 0 — Run Setup.");
+                Debug.LogError("[GameBootstrap] BillStartup component missing.");
                 return;
             }
 
             startup.transition = TransitionType.Fade;
             startup.transitionDuration = 0.5f;
 
-            // Editor bounce detection — see ARCHITECTURE_DECISIONS.md
 #if UNITY_EDITOR
             bool isEditorBounce = UnityEditor.EditorPrefs.GetInt("Bill_ReturnScene", -1) > 0;
             startup.nextScene = isEditorBounce ? "" : FirstScene;
+            Debug.Log($"[GameBootstrap] editorBounce={isEditorBounce} → BillStartup.nextScene='{startup.nextScene}'");
 #else
             startup.nextScene = FirstScene;
 #endif
 
-            // Cosmetic step — verifies all services healthy after pool registration.
-            // Logo animation will eat ~1.5s of this in production; editor bounce kills it.
             startup.AddStep("Health Check", () =>
             {
                 Bill.Trace.HealthCheck();
@@ -65,15 +63,46 @@ namespace Mythfall.Core
             });
         }
 
+        void OnEnable()
+        {
+            Debug.Log($"[GameBootstrap] OnEnable @ frame={Time.frameCount}");
+            // Subscribe to GameReadyEvent in case Bill wasn't ready in Awake (production flow).
+            if (Bill.Events != null)
+                Bill.Events.SubscribeOnce<GameReadyEvent>(OnGameReady);
+        }
+
         void Start()
         {
-            // Pool registration needs Bill.Pool which is registered in Phase2 (after Awake,
-            // before Start). Register here so pools are ready before scene transition fires.
-            if (!_poolsRegistered && Bill.IsReady)
+            Debug.Log($"[GameBootstrap] Start @ frame={Time.frameCount} BillReady={Bill.IsReady} poolsRegistered={_poolsRegistered}");
+            TryRegisterPools("Start");
+        }
+
+        void OnDestroy()
+        {
+            Debug.Log($"[GameBootstrap] OnDestroy @ frame={Time.frameCount}");
+        }
+
+        void OnGameReady(GameReadyEvent _)
+        {
+            Debug.Log($"[GameBootstrap] OnGameReady @ frame={Time.frameCount}");
+            TryRegisterPools("GameReadyEvent");
+        }
+
+        void TryRegisterPools(string source)
+        {
+            if (_poolsRegistered)
             {
-                RegisterPools();
-                _poolsRegistered = true;
+                Debug.Log($"[GameBootstrap] TryRegisterPools({source}) skipped — already registered");
+                return;
             }
+            if (!Bill.IsReady)
+            {
+                Debug.Log($"[GameBootstrap] TryRegisterPools({source}) deferred — Bill not ready yet");
+                return;
+            }
+            RegisterPools();
+            _poolsRegistered = true;
+            Debug.Log($"[GameBootstrap] TryRegisterPools({source}) DONE");
         }
 
         bool RegisterPools()
