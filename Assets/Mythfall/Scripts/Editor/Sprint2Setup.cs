@@ -2,7 +2,9 @@
 using System.IO;
 using UnityEditor;
 using UnityEditor.Animations;
+using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using ModularTopDown.Locomotion;
 using Mythfall.Characters;
 using Mythfall.Enemy;
@@ -56,6 +58,9 @@ namespace Mythfall.EditorTools
         const int EnemyLayer = 8;
         const int ProjectileLayer = 9;
 
+        const string GameplayScenePath = "Assets/Mythfall/Scenes/GameplayScene.unity";
+        const string TestRootName = "[TestSetup]";
+
         [MenuItem("Tools/Mythfall/Sprint 2 — Build Placeholder Prefabs")]
         public static void Build()
         {
@@ -85,6 +90,171 @@ namespace Mythfall.EditorTools
             AssetDatabase.Refresh();
 
             Debug.Log("[Sprint2Setup] DONE. 4 prefabs + 2 AnimatorControllers + 4 materials + Swarmer_Data + Layer 'Enemy'/'Projectile' configured.");
+        }
+
+        // -------------------------------------------------------------------
+        // Gameplay scene test layout — Day 2 smoke test
+        // Plane + Directional Light + Camera angle + Kai instance + 4 Swarmer instances.
+        // Idempotent — clears previous [TestSetup] root + Kai/Lyra/Swarmer instances at scene root.
+        // -------------------------------------------------------------------
+
+        [MenuItem("Tools/Mythfall/Sprint 2 — Setup GameplayScene for Test")]
+        public static void SetupGameplayScene()
+        {
+            if (EditorApplication.isPlaying)
+            {
+                Debug.LogError("[Sprint2Setup] Exit Play mode before running gameplay setup.");
+                return;
+            }
+
+            // Verify required prefabs exist before opening scene (cheaper failure)
+            var kaiPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(KaiPrefabPath);
+            var swarmerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SwarmerPrefabPath);
+            if (kaiPrefab == null || swarmerPrefab == null)
+            {
+                Debug.LogError("[Sprint2Setup] Run 'Sprint 2 — Build Placeholder Prefabs' first; Kai or Swarmer prefab missing.");
+                return;
+            }
+
+            if (!File.Exists(GameplayScenePath))
+            {
+                Debug.LogError($"[Sprint2Setup] {GameplayScenePath} not found — run Sprint 0 setup first.");
+                return;
+            }
+
+            if (EditorSceneManager.GetActiveScene().isDirty)
+            {
+                if (!EditorUtility.DisplayDialog(
+                    "Unsaved changes",
+                    "Active scene has unsaved changes. Continue (changes will be lost)?",
+                    "Continue", "Cancel"))
+                    return;
+            }
+
+            var scene = EditorSceneManager.OpenScene(GameplayScenePath, OpenSceneMode.Single);
+
+            // Clear previous test layout
+            ClearPreviousTestSetup(scene);
+
+            // Build [TestSetup] root holding plane + light
+            var testRoot = new GameObject(TestRootName);
+            SceneManager.MoveGameObjectToScene(testRoot, scene);
+            CreateGroundPlane(testRoot.transform);
+            CreateDirectionalLight(testRoot.transform);
+
+            // Camera reposition (use existing Main Camera if present, else create)
+            ConfigureMainCamera(scene);
+
+            // Spawn Kai at origin
+            var kaiInstance = (GameObject)PrefabUtility.InstantiatePrefab(kaiPrefab, scene);
+            kaiInstance.name = "Kai";
+            kaiInstance.transform.position = Vector3.zero;
+            ConfigureKaiGroundLayer(kaiInstance);
+
+            // Spawn 4 Swarmers in a rough circle around Kai
+            Vector3[] swarmerPositions =
+            {
+                new Vector3( 4f, 0f,  0f),
+                new Vector3(-4f, 0f,  2f),
+                new Vector3( 0f, 0f,  5f),
+                new Vector3( 3f, 0f, -3f),
+            };
+            for (int i = 0; i < swarmerPositions.Length; i++)
+            {
+                var s = (GameObject)PrefabUtility.InstantiatePrefab(swarmerPrefab, scene);
+                s.name = $"Swarmer_{i + 1}";
+                s.transform.position = swarmerPositions[i];
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+
+            Debug.Log("[Sprint2Setup] GameplayScene populated: plane + light + Main Camera + Kai + 4 Swarmers. Press Play (from this scene) to test combat loop.");
+        }
+
+        static void ClearPreviousTestSetup(Scene scene)
+        {
+            foreach (var root in scene.GetRootGameObjects())
+            {
+                if (root.name == TestRootName ||
+                    root.name == "Kai" || root.name == "Lyra" ||
+                    root.name.StartsWith("Swarmer"))
+                {
+                    Object.DestroyImmediate(root, allowDestroyingAssets: false);
+                }
+            }
+        }
+
+        static void CreateGroundPlane(Transform parent)
+        {
+            var plane = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            plane.name = "Ground";
+            plane.transform.SetParent(parent, false);
+            plane.transform.localPosition = Vector3.zero;
+            plane.transform.localScale = new Vector3(2f, 1f, 2f); // 20m x 20m (Plane base = 10m)
+            plane.layer = 0; // Default — CharacterLocomotion ground check uses this
+            // Plane primitive ships with a default white material; leave it for visibility.
+        }
+
+        static void CreateDirectionalLight(Transform parent)
+        {
+            var go = new GameObject("Directional Light");
+            go.transform.SetParent(parent, false);
+            go.transform.localRotation = Quaternion.Euler(50f, -30f, 0f);
+            var light = go.AddComponent<Light>();
+            light.type = LightType.Directional;
+            light.intensity = 1.1f;
+            light.color = new Color(1f, 0.96f, 0.88f);
+            light.shadows = LightShadows.Soft;
+        }
+
+        static void ConfigureMainCamera(Scene scene)
+        {
+            Camera cam = null;
+            foreach (var root in scene.GetRootGameObjects())
+            {
+                cam = root.GetComponentInChildren<Camera>(includeInactive: true);
+                if (cam != null) break;
+            }
+
+            GameObject camGo;
+            if (cam == null)
+            {
+                camGo = new GameObject("Main Camera");
+                camGo.tag = "MainCamera";
+                cam = camGo.AddComponent<Camera>();
+                camGo.AddComponent<AudioListener>();
+                SceneManager.MoveGameObjectToScene(camGo, scene);
+            }
+            else
+            {
+                camGo = cam.gameObject;
+            }
+
+            camGo.transform.position = new Vector3(0f, 10f, -8f);
+            camGo.transform.rotation = Quaternion.Euler(50f, 0f, 0f);
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0.05f, 0.06f, 0.10f);
+            cam.fieldOfView = 60f;
+        }
+
+        static void ConfigureKaiGroundLayer(GameObject kai)
+        {
+            var loco = kai.GetComponent<CharacterLocomotion>();
+            if (loco == null) return;
+
+            // CharacterLocomotion.groundLayer is a serialized LayerMask field — set to "Default" (bit 0 = value 1).
+            var so = new SerializedObject(loco);
+            var prop = so.FindProperty("groundLayer");
+            if (prop != null)
+            {
+                prop.intValue = 1; // Default layer mask
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+            else
+            {
+                Debug.LogWarning("[Sprint2Setup] CharacterLocomotion.groundLayer field not found — set manually in Inspector.");
+            }
         }
 
         // -------------------------------------------------------------------
