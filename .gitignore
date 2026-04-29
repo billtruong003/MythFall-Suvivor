@@ -65,8 +65,3 @@ ExportedObj/
 # Local-only handoff notes the user might keep alongside committed HANDOFF.md
 HANDOFF_LOCAL.md
 
-# =============================================================================
-# Third-party Asset Store content — re-import from Asset Store, do not redistribute
-# =============================================================================
-[Aa]ssets/Layer Lab/
-[Aa]ssets/Layer Lab.meta
