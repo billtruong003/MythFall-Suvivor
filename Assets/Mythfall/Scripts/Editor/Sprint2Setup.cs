@@ -77,14 +77,21 @@ namespace Mythfall.EditorTools
             var swarmerMat = CreateUrpLitMaterial(SwarmerMatPath, new Color(0.373f, 0.369f, 0.353f)); // #5F5E5A
             var arrowMat = CreateUrpLitMaterial(ArrowMatPath, new Color(0.95f, 0.85f, 0.55f));
 
-            var kaiPrefab = BuildPlayerPrefab(KaiPrefabPath, "Kai", isMelee: true, mat: kaiMat, ctrl: playerCtrl);
-            var lyraPrefab = BuildPlayerPrefab(LyraPrefabPath, "Lyra", isMelee: false, mat: lyraMat, ctrl: playerCtrl);
+            // Load CharacterDataSOs first so we can wire them into prefabs at build time
+            var kaiData = AssetDatabase.LoadAssetAtPath<CharacterDataSO>(KaiDataPath);
+            var lyraData = AssetDatabase.LoadAssetAtPath<CharacterDataSO>(LyraDataPath);
+            if (kaiData == null || lyraData == null)
+                Debug.LogWarning("[Sprint2Setup] Kai_Data or Lyra_Data missing — run 'Sprint 1 — Create Character Data' first.");
+
+            var kaiPrefab = BuildPlayerPrefab(KaiPrefabPath, "Kai", isMelee: true, mat: kaiMat, ctrl: playerCtrl, data: kaiData);
+            var lyraPrefab = BuildPlayerPrefab(LyraPrefabPath, "Lyra", isMelee: false, mat: lyraMat, ctrl: playerCtrl, data: lyraData);
             var swarmerPrefab = BuildSwarmerPrefab(SwarmerPrefabPath, mat: swarmerMat, ctrl: enemyCtrl);
             var arrowPrefab = BuildArrowPrefab(ArrowPrefabPath, mat: arrowMat);
 
             BuildSwarmerData(SwarmerDataPath, swarmerPrefab);
-            WirePlayerDataPrefab(KaiDataPath, kaiPrefab);
-            WirePlayerDataPrefab(LyraDataPath, lyraPrefab);
+            // Wire CharacterDataSO.characterPrefab back-references (data → prefab)
+            if (kaiData != null) { kaiData.characterPrefab = kaiPrefab; EditorUtility.SetDirty(kaiData); }
+            if (lyraData != null) { lyraData.characterPrefab = lyraPrefab; EditorUtility.SetDirty(lyraData); }
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -368,7 +375,7 @@ namespace Mythfall.EditorTools
         // Player prefab (Kai melee, Lyra ranged)
         // -------------------------------------------------------------------
 
-        static GameObject BuildPlayerPrefab(string path, string charName, bool isMelee, Material mat, AnimatorController ctrl)
+        static GameObject BuildPlayerPrefab(string path, string charName, bool isMelee, Material mat, AnimatorController ctrl, CharacterDataSO data)
         {
             // Build in-memory hierarchy then save as prefab
             var root = new GameObject(charName);
@@ -439,6 +446,7 @@ namespace Mythfall.EditorTools
             var basePlayer = root.GetComponent<PlayerBase>();
             SetObjectRef(basePlayer, "muzzlePoint", muzzle.transform);
             SetObjectRef(basePlayer, "animator", animator);
+            if (data != null) SetObjectRef(basePlayer, "characterData", data);
 
             // Save as prefab
             var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
@@ -557,22 +565,6 @@ namespace Mythfall.EditorTools
                     EditorUtility.SetDirty(prefab);
                 }
             }
-        }
-
-        // -------------------------------------------------------------------
-        // CharacterDataSO ↔ player prefab wiring
-        // -------------------------------------------------------------------
-
-        static void WirePlayerDataPrefab(string dataPath, GameObject prefab)
-        {
-            var so = AssetDatabase.LoadAssetAtPath<CharacterDataSO>(dataPath);
-            if (so == null)
-            {
-                Debug.LogWarning($"[Sprint2Setup] {dataPath} missing — run Sprint 1 setup first.");
-                return;
-            }
-            so.characterPrefab = prefab;
-            EditorUtility.SetDirty(so);
         }
 
         // -------------------------------------------------------------------

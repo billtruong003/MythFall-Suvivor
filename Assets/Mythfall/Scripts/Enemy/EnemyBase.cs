@@ -23,6 +23,14 @@ namespace Mythfall.Enemy
         const string PlayerTag = "Player";
         const float DespawnDelay = 1f;
 
+        protected virtual void Start()
+        {
+            // Scene-placed instance (e.g. dropped into GameplayScene via editor) — pool spawner
+            // would have called OnSpawn already, but for editor-only test layouts we need to
+            // self-init so chase/attack logic activates.
+            if (!IsAlive) OnSpawn();
+        }
+
         public virtual void OnSpawn()
         {
             if (data == null)
