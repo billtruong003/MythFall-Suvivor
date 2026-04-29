@@ -49,9 +49,13 @@ namespace Mythfall.Core
             startup.transitionDuration = 0.5f;
 
 #if UNITY_EDITOR
-            bool isEditorBounce = UnityEditor.EditorPrefs.GetInt("Bill_ReturnScene", -1) > 0;
-            startup.nextScene = isEditorBounce ? "" : FirstScene;
-            Debug.Log($"[GameBootstrap] editorBounce={isEditorBounce} → BillStartup.nextScene='{startup.nextScene}'");
+            // Bill.Phase2 editor-return reads EditorPrefs Bill_ReturnScene, DELETES the key,
+            // then calls Bill.Scene.Load(returnScene). By the time Awake runs (after Phase2),
+            // the EditorPrefs is gone — but the scene load coroutine is still running.
+            // Detect that via Bill.Scene.IsLoading instead.
+            bool billLoadingScene = Bill.IsReady && Bill.Scene != null && Bill.Scene.IsLoading;
+            startup.nextScene = billLoadingScene ? "" : FirstScene;
+            Debug.Log($"[GameBootstrap] billLoadingScene={billLoadingScene} → BillStartup.nextScene='{startup.nextScene}' (empty = let Bill's editor-return win)");
 #else
             startup.nextScene = FirstScene;
 #endif
