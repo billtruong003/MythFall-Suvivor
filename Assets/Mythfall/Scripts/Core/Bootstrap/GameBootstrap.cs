@@ -29,9 +29,20 @@ namespace Mythfall.Core
                 return;
             }
 
-            startup.nextScene = FirstScene;
             startup.transition = TransitionType.Fade;
             startup.transitionDuration = 0.5f;
+
+            // In Editor, when user pressed Play from a non-bootstrap scene, Bill saves that
+            // scene name in EditorPrefs ("Bill_ReturnScene") and Phase2 loads it back after init.
+            // If we ALSO set startup.nextScene = "MenuScene", BillStartup overrides Bill's
+            // editor-return at the end of its coroutine — user lands on Menu instead of their
+            // chosen test scene. Detect this and skip the override during editor bounces.
+#if UNITY_EDITOR
+            bool isEditorBounce = UnityEditor.EditorPrefs.GetInt("Bill_ReturnScene", -1) > 0;
+            startup.nextScene = isEditorBounce ? "" : FirstScene;
+#else
+            startup.nextScene = FirstScene;
+#endif
 
             startup.AddStep("Initialize Localization", () =>
             {
