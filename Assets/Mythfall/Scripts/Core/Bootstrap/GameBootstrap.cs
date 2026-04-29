@@ -20,8 +20,24 @@ namespace Mythfall.Core
 
         [SerializeField] BillStartup startup;
 
+        bool _poolsRegistered;
+
         void Awake()
         {
+            // === Register Mythfall services in Awake (not via BillStartup steps) ===
+            // Why: BillStartup runs its steps inside a coroutine that includes ~1.5s of logo
+            // animation. In editor-bounce mode (Play from non-bootstrap scene), Bill's Phase2
+            // editor-return fires Bill.Scene.Load() immediately after GameReadyEvent — that
+            // scene transition completes (~0.5s) before BillStartup's logo finishes, killing
+            // the coroutine and skipping all steps. By registering here in Awake we guarantee
+            // services are available regardless of scene-transition timing.
+            if (!ServiceLocator.Has<LocalizationService>())
+            {
+                ServiceLocator.Register(new LocalizationService());
+                var loc = ServiceLocator.Get<LocalizationService>();
+                Debug.Log($"[GameBootstrap] LocalizationService registered, language: {loc.CurrentLanguage}");
+            }
+
             if (startup == null) startup = GetComponent<BillStartup>();
             if (startup == null)
             {
@@ -32,11 +48,7 @@ namespace Mythfall.Core
             startup.transition = TransitionType.Fade;
             startup.transitionDuration = 0.5f;
 
-            // In Editor, when user pressed Play from a non-bootstrap scene, Bill saves that
-            // scene name in EditorPrefs ("Bill_ReturnScene") and Phase2 loads it back after init.
-            // If we ALSO set startup.nextScene = "MenuScene", BillStartup overrides Bill's
-            // editor-return at the end of its coroutine — user lands on Menu instead of their
-            // chosen test scene. Detect this and skip the override during editor bounces.
+            // Editor bounce detection — see ARCHITECTURE_DECISIONS.md
 #if UNITY_EDITOR
             bool isEditorBounce = UnityEditor.EditorPrefs.GetInt("Bill_ReturnScene", -1) > 0;
             startup.nextScene = isEditorBounce ? "" : FirstScene;
@@ -44,23 +56,24 @@ namespace Mythfall.Core
             startup.nextScene = FirstScene;
 #endif
 
-            startup.AddStep("Initialize Localization", () =>
-            {
-                ServiceLocator.Register(new LocalizationService());
-                var loc = ServiceLocator.Get<LocalizationService>();
-                Debug.Log($"[GameBootstrap] LocalizationService ready, language: {loc.CurrentLanguage}");
-                return loc != null;
-            });
-
-            startup.AddStep("Register Pools", RegisterPools);
-
+            // Cosmetic step — verifies all services healthy after pool registration.
+            // Logo animation will eat ~1.5s of this in production; editor bounce kills it.
             startup.AddStep("Health Check", () =>
             {
                 Bill.Trace.HealthCheck();
                 return true;
             });
+        }
 
-            // Sprint 1 Day 3+: AddStep("Register States", ...), AddStep("Register UI", ...)
+        void Start()
+        {
+            // Pool registration needs Bill.Pool which is registered in Phase2 (after Awake,
+            // before Start). Register here so pools are ready before scene transition fires.
+            if (!_poolsRegistered && Bill.IsReady)
+            {
+                RegisterPools();
+                _poolsRegistered = true;
+            }
         }
 
         bool RegisterPools()

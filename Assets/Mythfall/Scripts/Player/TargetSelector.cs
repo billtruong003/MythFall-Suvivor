@@ -35,7 +35,10 @@ namespace Mythfall.Player
 
         void OnDestroy()
         {
-            if (_timerHandle != null) Bill.Timer?.Cancel(_timerHandle);
+            // Guard: Bill may not be initialized yet (Phase1 unloading scenes during bounce)
+            // or may have been Reset (play mode exit). Either way, the timer is already gone.
+            if (_timerHandle == null || !Bill.IsReady) return;
+            Bill.Timer.Cancel(_timerHandle);
         }
 
         void UpdateTarget()

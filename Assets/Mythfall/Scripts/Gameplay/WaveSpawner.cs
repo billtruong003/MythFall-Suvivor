@@ -49,7 +49,8 @@ namespace Mythfall.Gameplay
 
         void OnDestroy()
         {
-            if (waveTimer != null) Bill.Timer?.Cancel(waveTimer);
+            if (waveTimer == null || !Bill.IsReady) return;
+            Bill.Timer.Cancel(waveTimer);
         }
 
         void SpawnWave()
