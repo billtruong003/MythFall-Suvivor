@@ -12,7 +12,7 @@
 | Sprint | Focus | Days | Status | Build Output |
 |---|---|---|---|---|
 | **S0** | Project Setup + Framework Boot | 0.5-1 | 🟢 Done | Empty scenes load, Bill ready |
-| **S1** | Player + Single Enemy + Scene Flow | 3 | 🔵 In Progress | Walk, attack, kill enemy, full loop |
+| **S1** | Player + Single Enemy + Scene Flow | 3 | 🟢 Done (code-side) | Walk, attack, kill enemy, full loop |
 | **S2** | Combat Variety + Boss + Polish Layer 1 | 3 | 🟡 Not Started | 3+ enemies, boss fight, hitstop/shake |
 | **S3** | Skills + In-Run Progression | 3 | 🟡 Not Started | Skills + level up + 8 upgrade cards |
 | **S4** | Polish + Audio/VFX + Final Loop | 2-3 | 🟡 Not Started | Vertical slice playable build |
@@ -64,7 +64,7 @@
 ---
 
 # SPRINT 1 — Foundation: Player + Enemy + Loop
-**Days:** 3 | **Status:** 🟡 Not Started
+**Days:** 3 | **Status:** 🟢 Done (code-side, awaiting user Editor build + smoke test)
 
 **Goal:** Có thể chơi end-to-end: Menu → chọn 1 character → vào gameplay → đánh Swarmer → chết hoặc thắng → quay menu. **Toàn bộ UI localized VN+EN với star rating display.**
 
@@ -94,17 +94,35 @@
 - [x] GameBootstrap: AddStep "Register Pools" with Resources.Load fallback warnings
 - [x] Sprint2Setup editor menu — Layers (Enemy=8, Projectile=9), AnimatorControllers (Player + Enemy with full param set), 4 URP Lit materials, 4 placeholder prefabs (Kai red capsule + hitbox child, Lyra teal capsule + muzzle, Swarmer gray capsule, Arrow), Swarmer_Data SO, wire CharacterDataSO.characterPrefab refs
 - [x] enemy.swarmer.* localization keys (vi + en)
-- [ ] **USER:** open Unity → wait compile → run `Tools → Mythfall → Sprint 2 — Build Placeholder Prefabs`
-- [ ] **USER:** verify in Project: 4 prefabs + 2 controllers + 4 materials + Swarmer_Data exist; Kai_Data/Lyra_Data have characterPrefab assigned
-- [ ] **USER:** test in GameplayScene: drop Kai prefab + Swarmer prefab(s) — Swarmer chases, Kai auto-attacks; HP bars (placeholder log) decrement
+- [x] **USER:** open Unity → wait compile → run `Tools → Mythfall → Sprint 2 — Build Placeholder Prefabs`
+- [x] **USER:** verify in Project: 4 prefabs + 2 controllers + 4 materials + Swarmer_Data exist; Kai_Data/Lyra_Data have characterPrefab assigned
+- [x] **USER:** test in GameplayScene: drop Kai prefab + Swarmer prefab(s) — Swarmer chases, Kai auto-attacks; HP bars (placeholder log) decrement
+  - **Fix applied:** added Kinematic Rigidbody (UseGravity off) on Swarmer prefab → fixes 2 issues at once: (a) Swarmer's solid CapsuleCollider no longer pushes Kai's CharacterController off the map via physics resolution; (b) trigger events on Kai's hitbox SphereCollider now fire (Unity needs ≥1 Rigidbody participant for trigger detection). Future enemies (Brute, Shooter, Boss) must follow same pattern.
 
-### Day 3 — Scene Flow + UI + Integration (pending)
-- [ ] InventoryService + PlayerData (save selected character)
-- [ ] 4 UGUI panel scripts (logic only — user builds prefab visually)
-- [ ] Settings overlay with language dropdown
-- [ ] VirtualJoystick → MobileInputManager wiring
-- [ ] Update GameBootstrap.RegisterStates/Pools/UIPanels
-- [ ] CharacterSelectedEvent
+### Day 3 — Scene Flow + UI + Integration ✅ (code-side)
+- [x] InventoryService + PlayerData (Bill.Save round-trip, JsonUtility, schema versioned)
+- [x] 4 UGUI panel scripts (logic only — header comment in each spells out hierarchy + serialized refs):
+  - MainMenuPanel (Play → CharacterSelectState; Settings → toggle SettingsOverlay)
+  - CharacterSelectPanel (2 Kai/Lyra cards + Confirm → InventoryService.SetCurrent + fire CharacterSelectedEvent + GoTo InRun + load GameplayScene)
+  - HudPanel (HP fill via PlayerDamagedEvent, character name via LocalizedText.SetKey, 4★ display, Pause stub)
+  - GameOverPanel (Defeat title/subtitle + Retry + Hub)
+- [x] SettingsOverlay (VN/EN buttons via InventoryService.SetPreferredLanguage; Music/SFX sliders → Bill.Audio.SetVolume best-effort with try/catch + PlayerPrefs persist)
+- [x] VirtualJoystick UGUI → writes MobileInputManager.MoveVector
+- [x] MythfallPanelRegistry (static, CanvasGroup-based, desiredVisible survives scene unload) + MythfallPanelBase
+- [x] MythfallStates filled in (Enter/Exit panel show/hide, DefeatState timeScale 0.3x, InRunState resets MobileInputManager)
+- [x] SceneStateBinder (drop on per-scene GameObject; enum picks initial state)
+- [x] GameBootstrap.RegisterGameLayer (mirrors RegisterPools defer-until-Bill-ready pattern; registers InventoryService + 4 Mythfall states)
+- [x] CharacterSelectedEvent — already declared Day 2; CharacterSelectPanel fires it on confirm
+- [x] CharacterSpawnedEvent + GameplaySpawner (Instantiate-based, fires event on player spawn — see ARCHITECTURE_DECISIONS.md 2026-04-29)
+- [x] EnemyBase lazy-fetch player ref via ResolvePlayerTransform (handles GameplaySpawner-vs-WaveSpawner ordering race)
+- [x] HudPanel subscribes CharacterSpawnedEvent for fresh PlayerHealth bind on retry flow
+- [x] Sprint2Setup root-cause fix (groundLayer baked into Kai+Lyra prefab build, Swarmer kinematic Rigidbody added — see ARCHITECTURE_DECISIONS.md 2026-04-29)
+- [x] Kai.prefab + Lyra.prefab YAML patch (groundLayer m_Bits 0→1)
+- [ ] **USER:** open Unity → wait compile → re-run `Tools → Mythfall → Sprint 2 — Build Placeholder Prefabs` → verify Kai/Lyra Ground Layer = Default + Swarmer Rigidbody exists
+- [ ] **USER:** build GameObject hierarchy in MenuScene + GameplayScene per each panel script's header comment, assign SerializeField refs
+- [ ] **USER:** drop SceneStateBinder on MenuScene GO (Initial = MainMenu) + GameplayScene GO (Initial = InRun)
+- [ ] **USER:** drop GameplaySpawner on GameplayScene "[GameplaySpawner]" GO with optional spawnPoint child Transform (Vector3.zero fallback if unset)
+- [ ] **USER:** smoke test full loop: boot → Play → Kai → Gameplay (auto-spawn) → die → Retry / Hub. Switch VN/EN in Settings, verify all panels update.
 
 ## Definition of Done
 - [ ] User flow: Menu → CharacterSelect → Gameplay → Death → Menu (loop)
@@ -237,6 +255,9 @@ End of Sprint 4, user phải:
 - 2026-04-28 — Sprint 0 → 🟢 Done. Verified runtime: `[Bill] Ready. 14 services in 349ms`, LocalizationService loaded vi (8 keys) + en fallback (8 keys), HealthCheck all OK, BillStartup ran 2 steps and transitioned Bootstrap → MenuScene. Refactored GameBootstrap to use BillStartup AddStep pattern; added splash Logo + CanvasGroup auto-build in Sprint0Setup; added LocalizationTester temp script. **Deferred:** APK build (per user); 3 `No Theme Style Sheet set to PanelSettings` warnings (defer Sprint 1 UI work); BillInspector duplicate menu item (internal, ignored); 2 AudioListener warning in Bootstrap from orphan Unity-created Camera GO (dedupe logic added but user opted not to re-run setup). Sprint 1 → 🔵 In Progress.
 - 2026-04-28 — Sprint 1 Day 1 code-side complete. Modified CharacterLocomotion (5 additive changes — see Docs/ARCHITECTURE_DECISIONS.md). Created Skills/SkillCore.cs (SkillDataSO + ISkillExecution + SkillContext stubs), Characters/{CharacterStats, RuntimeCharacterStats, CharacterDataSO}.cs, Player/{PlayerHealth, TargetSelector, PlayerFacing, PlayerCombatBase, PlayerBase}.cs, Input/MobileInputManager.cs, Core/Events/GameEvents.cs (PlayerDamagedEvent + PlayerDiedEvent), Core/States/MythfallStates.cs (4 state stubs). Expanded lang_vi.json + lang_en.json with character.kai/lyra.* + ui.character_select.* + ui.hud.* + ui.game_over.* + ui.settings.* keys. Sprint1Setup editor menu auto-generates Kai_Data + Lyra_Data ScriptableObjects with canonical stats (Kai: HP120/ATK15/Range1.8/Crit15%; Lyra: HP80/ATK20/Range10/Crit20%). **Awaiting user:** run `Tools → Mythfall → Sprint 1 — Create Character Data` to generate the 2 SO assets. Day 2 (combat + enemy + spawner) blocked on placeholder prefabs (will tackle next).
 - 2026-04-28 — Sprint 1 Day 2 code-side complete. Combat/enemy stack: HitboxRelay, MeleeCombat (120° arc + animation event hooks OnHitboxEnable/Disable + timer fallback), RangedCombat (projectile spawn via OnArrowRelease + timer fallback), MeleePlayer + RangedPlayer concrete, Gameplay/Projectile (pool + pierce), Enemy/{EnemyDataSO, EnemyBase, SwarmerEnemy with chase+attack+OnAttackHit event}, Gameplay/WaveSpawner (5/5s). Extended GameEvents with EnemyHitEvent + EnemyKilledEvent + CharacterSelectedEvent. GameBootstrap registers `Enemy_Swarmer` + `Projectile_Arrow` pools via Resources.Load fallback. Sprint2Setup editor menu auto-generates: Layer 8=Enemy + Layer 9=Projectile, PlayerAnimator + EnemyAnimator AnimatorControllers (full param set), 4 URP Lit materials, 4 placeholder prefabs (Kai melee with hitbox child + Lyra ranged with muzzle + Swarmer + Arrow), Swarmer_Data SO, wires CharacterDataSO.characterPrefab refs. enemy.swarmer.* keys added to JSONs. **Animation event design:** all combat timing animation-event driven via DynamicAnimationEventHub (user wires UnityEvent in Inspector); each combat component has `useTimerFallback` flag (default true) to keep loop testable on placeholder Animator without clip events — flip false on real prefab once anim events wired. **Awaiting user:** run `Tools → Mythfall → Sprint 2 — Build Placeholder Prefabs` then test combat in GameplayScene.
+- 2026-04-29 — Sprint 1 Day 3 spawner gap closed. GameplaySpawner created (Instantiate of CharacterDataSO.characterPrefab at scene-resident spawnPoint, fires CharacterSpawnedEvent). Pool route considered and rejected — pooling the player would require a `PlayerBase.OnSpawn()` re-init path (HP/stats/iFrame/animator/locomotion reset) that scene reload already gives us for free; documented in ARCHITECTURE_DECISIONS.md as a Rule-3 exception for singleton scene-bound entities. Race condition between GameplaySpawner (async on Bill ready) and WaveSpawner (also async) addressed via lazy-fetch in `EnemyBase.ResolvePlayerTransform()` called from SwarmerEnemy.Update — handles either spawn ordering, caches on first hit, no per-enemy event subscription overhead. HudPanel additionally subscribes CharacterSpawnedEvent on every show so retry flow rebinds HP fill to fresh PlayerHealth without relying on `SyncFromActivePlayer`'s FindGameObjectWithTag race. Sprint 1 → 🟢 Done code-side. Remaining work is all Editor: rebuild prefabs via Sprint 2 setup, build panel hierarchies per header specs, drop SceneStateBinder + GameplaySpawner in scenes, smoke test full loop with EN/VN switching.
+- 2026-04-29 — Sprint 1 Day 3 code-side complete. Inventory layer (PlayerData POCO + InventoryService IInitializable, Bill.Save round-trip via JsonUtility, schema-versioned with stub MigrateData, language reconciliation makes PlayerData canonical over LocalizationService PlayerPref, defensive guards for empty owned list / orphan currentCharacterId / missing CharacterDataSO Resources). UGUI panel framework: MythfallPanelRegistry (static, CanvasGroup-based hide so panel stays registered while invisible, desiredVisible dict survives scene unload, Editor InitializeOnEnterPlayMode reset) + MythfallPanelBase ([RequireComponent CanvasGroup], OnPanelShown/Hidden hooks). 4 panels (MainMenu, CharacterSelect with [Serializable] CharacterCardWiring nested, Hud subscribing PlayerDamagedEvent + LocalizedText.SetKey for dynamic name, GameOver) + SettingsOverlay (VN/EN via InventoryService.SetPreferredLanguage, Music/SFX sliders best-effort Bill.Audio.SetVolume with try/catch + PlayerPrefs persist). VirtualJoystick UGUI (IPointerDown/Drag/Up → MobileInputManager.MoveVector, OnDisable resets so stale input doesn't bleed across scenes). MythfallStates filled in (DefeatState Time.timeScale 0.3x, InRunState resets MobileInputManager). SceneStateBinder (enum-based, defers to Bill ready) lets each scene declare its initial state without hardcoded GameBootstrap-vs-MenuScene coupling. GameBootstrap.RegisterGameLayer mirrors RegisterPools defer-until-Bill-ready pattern (registers InventoryService + 4 Mythfall states; called from Awake/Start/OnGameReady triggers). All UI text routes through LocalizedText component (CLAUDE.md Rule 8) — every required key already exists in lang_{vi,en}.json from Day 1. **Bonus tool fix:** Sprint2Setup.cs had two bugs sharing the "config-on-scene-instance-not-prefab-asset" anti-pattern — (1) Kai's groundLayer was set on the scene instance only, never on the asset, and Lyra never got it at all; (2) Swarmer's Day 2 kinematic Rigidbody fix only existed on the verified scene prefab, not in the regeneration tool. Both fixed by moving the configuration into BuildPlayerPrefab/BuildSwarmerPrefab BEFORE SaveAsPrefabAsset. Patched Kai.prefab + Lyra.prefab YAML (m_Bits 0 → 1) to match what Sprint2Setup would now generate. Documented in Docs/ARCHITECTURE_DECISIONS.md (2026-04-29 entry above the Day 2 RB entry). **Awaiting user:** re-run Sprint 2 setup to verify regenerated prefabs match the patched YAMLs, build GameObject hierarchies in MenuScene + GameplayScene per each panel script's header-comment spec, drop SceneStateBinder on per-scene Bootstrap GO, then smoke test full loop end-to-end with EN ↔ VN language switch.
+- 2026-04-29 — Sprint 1 Day 2 verified end-to-end via diagnostic logging round. Initial smoke test surfaced two coupled bugs: (a) Kai pushed off the ground plane by Swarmers; (b) damage never landing despite Execute firing. Root cause for both: Swarmer prefab had a solid CapsuleCollider with no Rigidbody → physics engine treated it as a moving static collider that shoves Kai's CharacterController, AND Unity trigger events require ≥1 Rigidbody participant which neither the Hitbox child SphereCollider nor the Swarmer had. **User fix:** added a Kinematic Rigidbody (UseGravity off) on the Swarmer prefab. Re-test confirmed: Swarmers chase Kai, attack lands (Kai 115/120 after 4-Swarmer wave thanks to PlayerHealth's 0.3s iFrame collapsing simultaneous hits), Kai's swings land, Swarmers die and return to pool after the 1s death-anim delay. Animation invisible by design — capsule placeholders, no clips wired (Sprint 2 polish). 4 temp `[DIAG]` log sites added then removed cleanly. **Sprint 1 Day 2 → 🟢 Done. Sprint 1 Day 3 unblocked.**
 
 ---
 

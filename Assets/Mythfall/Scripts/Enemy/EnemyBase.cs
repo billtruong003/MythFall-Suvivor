@@ -43,8 +43,23 @@ namespace Mythfall.Enemy
             IsAlive = true;
             gameObject.SetActive(true);
 
+            // Player may not be in scene yet — GameplaySpawner is async on Bill ready
+            // and may run after WaveSpawner spawns this enemy. Subclasses lazy-fetch
+            // via ResolvePlayerTransform() in their Update tick.
+            playerTransform = null;
+        }
+
+        /// <summary>
+        /// Lazy-fetch player transform when subclasses first need it. Cached on
+        /// success — subsequent calls are O(1). Called from Update tick to handle
+        /// the GameplaySpawner-vs-WaveSpawner ordering race.
+        /// </summary>
+        protected Transform ResolvePlayerTransform()
+        {
+            if (playerTransform != null) return playerTransform;
             var p = GameObject.FindGameObjectWithTag(PlayerTag);
-            playerTransform = p != null ? p.transform : null;
+            if (p != null) playerTransform = p.transform;
+            return playerTransform;
         }
 
         public virtual void TakeDamage(float amount, PlayerBase attacker)

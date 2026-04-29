@@ -41,4 +41,12 @@ namespace Mythfall.Events
     {
         public string characterId;
     }
+
+    /// <summary>Fired by GameplaySpawner once the player is alive in GameplayScene. Subscribed by HUD HP binding, camera follow (Sprint 4), and any system that needs a player reference without polling FindGameObjectWithTag.</summary>
+    public struct CharacterSpawnedEvent : IEvent
+    {
+        public Mythfall.Player.PlayerBase player;
+        public Transform transform;
+        public string characterId;
+    }
 }

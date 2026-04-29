@@ -42,7 +42,8 @@ namespace Mythfall.Enemy
 
         void Update()
         {
-            if (!IsAlive || playerTransform == null) return;
+            if (!IsAlive) return;
+            if (ResolvePlayerTransform() == null) return; // wait for GameplaySpawner to spawn the player
 
             if (attackTimer > 0f) attackTimer -= Time.deltaTime;
 

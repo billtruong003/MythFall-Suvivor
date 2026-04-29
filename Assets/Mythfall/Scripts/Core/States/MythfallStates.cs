@@ -1,16 +1,58 @@
+using UnityEngine;
 using BillGameCore;
+using Mythfall.Input;
+using Mythfall.UI;
+using Mythfall.UI.Panels;
 
 namespace Mythfall.States
 {
-    // Sprint 1 Day 1 — empty stubs so PlayerBase + scene flow can reference these types.
-    // Day 3 fills in Enter/Exit to open/close UI panels:
-    //   MainMenuState.Enter → Bill.UI.Open<MainMenuPanel>()
-    //   CharacterSelectState.Enter → Bill.UI.Open<CharacterSelectPanel>()
-    //   InRunState.Enter → Bill.UI.Open<HudPanel>()
-    //   DefeatState.Enter → Time.timeScale = 0.3f; Bill.UI.Open<GameOverPanel>()
+    /// <summary>Active when the user is on the Main Menu (MenuScene).</summary>
+    public class MainMenuState : GameState
+    {
+        public override void Enter() => MythfallPanelRegistry.Show<MainMenuPanel>();
+        public override void Exit()
+        {
+            MythfallPanelRegistry.Hide<MainMenuPanel>();
+            // Defensive: if user left settings open and triggered a state-change shortcut,
+            // close it so it doesn't bleed into the next screen.
+            MythfallPanelRegistry.Hide<SettingsOverlay>();
+        }
+    }
 
-    public class MainMenuState : GameState { }
-    public class CharacterSelectState : GameState { }
-    public class InRunState : GameState { }
-    public class DefeatState : GameState { }
+    /// <summary>Character pick screen — still in MenuScene.</summary>
+    public class CharacterSelectState : GameState
+    {
+        public override void Enter() => MythfallPanelRegistry.Show<CharacterSelectPanel>();
+        public override void Exit() => MythfallPanelRegistry.Hide<CharacterSelectPanel>();
+    }
+
+    /// <summary>Active during gameplay (GameplayScene) — HUD visible, joystick driving input.</summary>
+    public class InRunState : GameState
+    {
+        public override void Enter()
+        {
+            MobileInputManager.Reset();
+            MythfallPanelRegistry.Show<HudPanel>();
+        }
+        public override void Exit()
+        {
+            MythfallPanelRegistry.Hide<HudPanel>();
+            MobileInputManager.Reset();
+        }
+    }
+
+    /// <summary>Defeat screen — slow-mo, GameOverPanel visible. Retry/Hub buttons drive next state.</summary>
+    public class DefeatState : GameState
+    {
+        public override void Enter()
+        {
+            Time.timeScale = 0.3f;
+            MythfallPanelRegistry.Show<GameOverPanel>();
+        }
+        public override void Exit()
+        {
+            Time.timeScale = 1f;
+            MythfallPanelRegistry.Hide<GameOverPanel>();
+        }
+    }
 }

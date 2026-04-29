@@ -156,7 +156,6 @@ namespace Mythfall.EditorTools
             var kaiInstance = (GameObject)PrefabUtility.InstantiatePrefab(kaiPrefab, scene);
             kaiInstance.name = "Kai";
             kaiInstance.transform.position = Vector3.zero;
-            ConfigureKaiGroundLayer(kaiInstance);
 
             // Spawn 4 Swarmers in a rough circle around Kai
             Vector3[] swarmerPositions =
@@ -245,9 +244,9 @@ namespace Mythfall.EditorTools
             cam.fieldOfView = 60f;
         }
 
-        static void ConfigureKaiGroundLayer(GameObject kai)
+        static void ConfigurePlayerGroundLayer(GameObject playerRoot)
         {
-            var loco = kai.GetComponent<CharacterLocomotion>();
+            var loco = playerRoot.GetComponent<CharacterLocomotion>();
             if (loco == null) return;
 
             // CharacterLocomotion.groundLayer is a serialized LayerMask field — set to "Default" (bit 0 = value 1).
@@ -388,6 +387,10 @@ namespace Mythfall.EditorTools
 
             var loco = root.AddComponent<CharacterLocomotion>();
 
+            // Set groundLayer = Default at PREFAB BUILD time (not scene-instance) so pool-spawned
+            // copies inherit the correct mask. Without this, m_Bits stays 0 → IsGrounded() always false.
+            ConfigurePlayerGroundLayer(root);
+
             root.AddComponent<PlayerHealth>();
             root.AddComponent<TargetSelector>();
             root.AddComponent<PlayerFacing>();
@@ -473,6 +476,14 @@ namespace Mythfall.EditorTools
 
             root.AddComponent<SwarmerEnemy>();
             root.AddComponent<DynamicAnimationEventHub>();
+
+            // Kinematic Rigidbody — REQUIRED for trigger events on player hitbox + prevents
+            // CharacterController push from CapsuleCollider overlap resolution.
+            // See Day 2 fix in Docs/ARCHITECTURE_DECISIONS.md (2026-04-29).
+            // Kinematic body ignores rotation tipping → no FreezeRotation constraints needed.
+            var rb = root.AddComponent<Rigidbody>();
+            rb.isKinematic = true;
+            rb.useGravity = false;
 
             // Visual child (capsule, no collider)
             var visual = GameObject.CreatePrimitive(PrimitiveType.Capsule);

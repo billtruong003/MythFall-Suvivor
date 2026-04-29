@@ -1,6 +1,8 @@
 using UnityEngine;
 using BillGameCore;
+using Mythfall.Inventory;
 using Mythfall.Localization;
+using Mythfall.States;
 
 namespace Mythfall.Core
 {
@@ -21,6 +23,7 @@ namespace Mythfall.Core
         [SerializeField] BillStartup startup;
 
         bool _poolsRegistered;
+        bool _gameLayerRegistered;
 
         void Awake()
         {
@@ -34,8 +37,9 @@ namespace Mythfall.Core
                 Debug.Log($"[GameBootstrap] LocalizationService registered, language: {loc.CurrentLanguage}");
             }
 
-            // Pool registration: try now if Bill ready (editor bounce flow), else defer
+            // Pool + game-layer registration: try now if Bill ready (editor bounce flow), else defer
             TryRegisterPools("Awake");
+            TryRegisterGameLayer("Awake");
 
             // Configure BillStartup splash
             if (startup == null) startup = GetComponent<BillStartup>();
@@ -77,8 +81,9 @@ namespace Mythfall.Core
 
         void Start()
         {
-            Debug.Log($"[GameBootstrap] Start @ frame={Time.frameCount} BillReady={Bill.IsReady} poolsRegistered={_poolsRegistered}");
+            Debug.Log($"[GameBootstrap] Start @ frame={Time.frameCount} BillReady={Bill.IsReady} poolsRegistered={_poolsRegistered} gameLayerRegistered={_gameLayerRegistered}");
             TryRegisterPools("Start");
+            TryRegisterGameLayer("Start");
         }
 
         void OnDestroy()
@@ -90,6 +95,7 @@ namespace Mythfall.Core
         {
             Debug.Log($"[GameBootstrap] OnGameReady @ frame={Time.frameCount}");
             TryRegisterPools("GameReadyEvent");
+            TryRegisterGameLayer("GameReadyEvent");
         }
 
         void TryRegisterPools(string source)
@@ -107,6 +113,41 @@ namespace Mythfall.Core
             RegisterPools();
             _poolsRegistered = true;
             Debug.Log($"[GameBootstrap] TryRegisterPools({source}) DONE");
+        }
+
+        void TryRegisterGameLayer(string source)
+        {
+            if (_gameLayerRegistered)
+            {
+                Debug.Log($"[GameBootstrap] TryRegisterGameLayer({source}) skipped — already registered");
+                return;
+            }
+            if (!Bill.IsReady)
+            {
+                Debug.Log($"[GameBootstrap] TryRegisterGameLayer({source}) deferred — Bill not ready yet");
+                return;
+            }
+            RegisterGameLayer();
+            _gameLayerRegistered = true;
+            Debug.Log($"[GameBootstrap] TryRegisterGameLayer({source}) DONE");
+        }
+
+        void RegisterGameLayer()
+        {
+            // InventoryService — owns persisted PlayerData. Initialize() reads Bill.Save,
+            // so it must register AFTER Bill ready.
+            if (!ServiceLocator.Has<InventoryService>())
+            {
+                ServiceLocator.Register(new InventoryService());
+                Debug.Log("[GameBootstrap] InventoryService registered.");
+            }
+
+            // Mythfall game states — Bill.State is a core service registered by Bill itself.
+            Bill.State.AddState<MainMenuState>();
+            Bill.State.AddState<CharacterSelectState>();
+            Bill.State.AddState<InRunState>();
+            Bill.State.AddState<DefeatState>();
+            Debug.Log("[GameBootstrap] 4 Mythfall states registered (MainMenu, CharacterSelect, InRun, Defeat).");
         }
 
         bool RegisterPools()

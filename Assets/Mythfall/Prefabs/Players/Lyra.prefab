@@ -90,7 +90,7 @@ MonoBehaviour:
   coyoteTime: 0.15
   groundLayer:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 1
   groundCheckDistance: 1.1
 --- !u!114 &7719811466853984754
 MonoBehaviour:
@@ -197,7 +197,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 676c8bca055f31e438e50e23bf1e95e8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Mythfall.Player.RangedPlayer
-  characterData: {fileID: 0}
+  characterData: {fileID: 11400000, guid: 5895438a3f3cace47943c3c72ee00874, type: 2}
   muzzlePoint: {fileID: 7763188173886785275}
   animator: {fileID: 5781539392127105865}
   rangedCombat: {fileID: 6731562211110390653}
