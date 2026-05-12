@@ -75,7 +75,10 @@ namespace Mythfall.Core
         {
             Debug.Log($"[GameBootstrap] OnEnable @ frame={Time.frameCount}");
             // Subscribe to GameReadyEvent in case Bill wasn't ready in Awake (production flow).
-            if (Bill.Events != null)
+            // Gate on Bill.IsReady (cheap, no error log) — Bill.Events getter logs a
+            // SERVICE NOT FOUND error if accessed before Phase2, even when null-checked.
+            // If Bill isn't ready yet, Start() picks up registration once it is.
+            if (Bill.IsReady)
                 Bill.Events.SubscribeOnce<GameReadyEvent>(OnGameReady);
         }
 
@@ -153,24 +156,27 @@ namespace Mythfall.Core
         bool RegisterPools()
         {
             int registered = 0;
+            int attempted = 0;
 
-            var swarmer = Resources.Load<GameObject>("Prefabs/Enemies/Swarmer");
-            if (swarmer != null)
+            attempted++; if (TryRegister("Enemy_Swarmer",    "Prefabs/Enemies/Swarmer",     30)) registered++;
+            attempted++; if (TryRegister("Enemy_Brute",      "Prefabs/Enemies/Brute",       12)) registered++;
+            attempted++; if (TryRegister("Enemy_Shooter",    "Prefabs/Enemies/Shooter",     12)) registered++;
+            attempted++; if (TryRegister("Projectile_Arrow", "Prefabs/Projectiles/Arrow",   20)) registered++;
+            attempted++; if (TryRegister("Enemy_Projectile", "Prefabs/Projectiles/EnemyProjectile", 20)) registered++;
+
+            Debug.Log($"[GameBootstrap] {registered}/{attempted} pools registered.");
+            return true;
+        }
+
+        static bool TryRegister(string poolKey, string resourcePath, int warmCount)
+        {
+            var prefab = Resources.Load<GameObject>(resourcePath);
+            if (prefab == null)
             {
-                Bill.Pool.Register("Enemy_Swarmer", swarmer, warmCount: 30);
-                registered++;
+                Debug.LogWarning($"[GameBootstrap] Resources/{resourcePath}.prefab missing — skipping pool '{poolKey}'.");
+                return false;
             }
-            else Debug.LogWarning("[GameBootstrap] Resources/Prefabs/Enemies/Swarmer.prefab missing — skipping pool.");
-
-            var arrow = Resources.Load<GameObject>("Prefabs/Projectiles/Arrow");
-            if (arrow != null)
-            {
-                Bill.Pool.Register("Projectile_Arrow", arrow, warmCount: 20);
-                registered++;
-            }
-            else Debug.LogWarning("[GameBootstrap] Resources/Prefabs/Projectiles/Arrow.prefab missing — skipping pool.");
-
-            Debug.Log($"[GameBootstrap] {registered}/2 pools registered.");
+            Bill.Pool.Register(poolKey, prefab, warmCount);
             return true;
         }
     }

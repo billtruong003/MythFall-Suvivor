@@ -49,4 +49,18 @@ namespace Mythfall.Events
         public Transform transform;
         public string characterId;
     }
+
+    /// <summary>Fired by WaveSpawner when boss timer elapses. Sprint 2 Day 2 BossController subscribes to spawn the boss prefab. Sprint 4 also subscribes for arena lighting / music cue.</summary>
+    public struct BossSpawnTriggeredEvent : IEvent
+    {
+        public string poolKey;
+        public Vector3 position;
+    }
+
+    /// <summary>Fired by polish layer to request a camera shake. Subscribed by CameraShake on Main Camera. Multiple firings stack via max() so simultaneous events don't cancel.</summary>
+    public struct ScreenShakeEvent : IEvent
+    {
+        public float intensity;
+        public float duration;
+    }
 }

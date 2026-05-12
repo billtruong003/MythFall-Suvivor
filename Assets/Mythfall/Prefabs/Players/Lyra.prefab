@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 7719811466853984754}
   - component: {fileID: 7867760990374676806}
   - component: {fileID: 8724318824116431190}
+  - component: {fileID: 870436040587882822}
   - component: {fileID: 5781539392127105865}
   - component: {fileID: 1969765576068687231}
   - component: {fileID: 6731562211110390653}
@@ -133,6 +134,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Mythfall.Player.PlayerFacing
   rotationSpeed: 15
   minMoveSqrToFace: 0.04
+--- !u!114 &870436040587882822
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2971124826732230984}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88f7c382ed9eb564694f5bb89118abde, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Mythfall.Polish.KnockbackReceiver
+  decayRate: 5
 --- !u!95 &5781539392127105865
 Animator:
   serializedVersion: 7

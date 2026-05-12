@@ -73,6 +73,18 @@
     "swarmer": {
       "name": "Hollow Imp",
       "desc": "Small swarming pest"
+    },
+    "brute": {
+      "name": "Wood-Render",
+      "desc": "Slow giant — one devastating slam"
+    },
+    "shooter": {
+      "name": "Spectral Archer",
+      "desc": "Ranged kiter — backpedals when pressed"
+    },
+    "rotwood": {
+      "name": "Rotwood — Rotten Heartwood",
+      "desc": "Chapter 1 boss — decayed root of the Sundered Grove"
     }
   }
 }

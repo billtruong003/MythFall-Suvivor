@@ -11,7 +11,7 @@ namespace Mythfall.UI.Panels
      * Path:  Canvas (Screen Space - Overlay) → MainMenuPanel (this GameObject, this script attached)
      *
      * Required hierarchy:
-     *   MainMenuPanel (RectTransform full-stretch, this script, GameObject INACTIVE by default)
+     *   MainMenuPanel (RectTransform full-stretch, this script, GameObject ACTIVE — visibility via CanvasGroup, NOT GameObject.SetActive)
      *   ├── Background (Image, color #1A1A28, full-stretch, raycastTarget = false)
      *   ├── Title (TMP_Text + LocalizedText key="ui.menu.title", anchor top-center, y=-160, size 1100x140)
      *   ├── PlayButton (Button + Image, anchor center, size 360x96, position y=-40)

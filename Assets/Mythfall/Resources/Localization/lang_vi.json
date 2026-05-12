@@ -73,6 +73,18 @@
     "swarmer": {
       "name": "Hư Linh Quỷ",
       "desc": "Quái nhỏ tấn công thành đàn"
+    },
+    "brute": {
+      "name": "Mộc Đoạt Tử",
+      "desc": "Tên khổng lồ chậm chạp, đập một phát mạnh kinh hoàng"
+    },
+    "shooter": {
+      "name": "Cung Ảo Quỷ",
+      "desc": "Bắn tên từ xa, lùi khi bị áp sát"
+    },
+    "rotwood": {
+      "name": "Rotwood — Cội Thối",
+      "desc": "Boss Chương 1 — gốc thối rữa của Thanh Lâm Vực"
     }
   }
 }

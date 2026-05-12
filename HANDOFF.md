@@ -1,4 +1,4 @@
-# 🛏️ HANDOFF — 2026-04-29 (end of Sprint 1 Day 3 code session)
+# 🛏️ HANDOFF — 2026-05-12 (end of Sprint 2 Day 1 code session)
 
 > Snapshot at end of session so future-you (or the next agent) can resume cold.
 > Focus is "what to do next time you sit down", not full history.
@@ -9,90 +9,118 @@
 
 | Sprint | Status | Notes |
 |---|---|---|
-| **S0 — Setup + Bootstrap + Localization** | 🟢 Done | Bill ready, VN/EN localization, BillStartup splash → MenuScene transition. APK build deferred. |
-| **S1 Day 1 — Data + Player Components** | 🟢 Done | Stats, RuntimeStats, CharacterDataSO, PlayerHealth, TargetSelector, PlayerFacing, PlayerBase, MobileInputManager, events, state stubs. |
-| **S1 Day 2 — Combat + Enemy + Spawner** | 🟢 Done | Combat loop verified end-to-end. Swarmer kinematic Rigidbody fix landed. |
-| **S1 Day 3 — UI Panels + State Flow + Inventory + Spawner** | 🟢 Done (code-side) | All scripts written. Awaiting Editor build + smoke test. **DO THIS NEXT.** |
-| S2 / S3 / S4 | 🟡 Not Started | — |
+| **S0 — Setup + Bootstrap + Localization** | 🟢 Done | Bill ready, VN/EN localization. |
+| **S1 — Player + Single Enemy + Scene Loop** | 🟢 Done | Verified end-to-end Editor 2026-05-12. |
+| **S2 Day 1 — Enemy Variety + AI State Machine** | 🟢 Done (code-side) | Awaiting user Editor build + smoke test. **DO THIS NEXT.** |
+| S2 Day 2 — Boss Fight (Rotwood) | 🟡 Not Started | Tomorrow. |
+| S2 Day 3 — Polish Layer 1 (HitStop, Shake, Damage Numbers, Flash) | 🟡 Not Started | After Day 2. |
+| S3 / S4 | 🟡 Not Started | — |
 
 ---
 
-## 🎯 WHEN YOU SIT DOWN AGAIN — FINISH SPRINT 1 DAY 3 IN THE EDITOR
+## 🎯 WHEN YOU SIT DOWN AGAIN — FINISH SPRINT 2 DAY 1 IN THE EDITOR
 
-Code-side is complete. Remaining work is **Unity Editor only**:
+Code is complete. Remaining work is **Unity Editor only**:
 
-### 1. Re-run Sprint 2 setup tool to regenerate prefabs
+### 1. Re-run Sprint 2 setup tool to add KnockbackReceiver to Kai/Lyra
 
 ```
 Tools → Mythfall → Sprint 2 — Build Placeholder Prefabs
 ```
 
 **Verify after run:**
-- `Assets/Mythfall/Prefabs/Players/Kai.prefab` → CharacterLocomotion → Ground Layer = "Default" (not "Nothing")
+- `Assets/Mythfall/Prefabs/Players/Kai.prefab` Inspector → `KnockbackReceiver` component present
 - `Assets/Mythfall/Prefabs/Players/Lyra.prefab` → same
-- `Assets/Mythfall/Resources/Prefabs/Enemies/Swarmer.prefab` → Rigidbody component present, Is Kinematic = ✓, Use Gravity = ☐, Constraints all unchecked
 
-If `git diff` on the regenerated prefabs shows anything beyond expected fields, paste the diff and adjust `Sprint2Setup.cs`.
+### 2. Run Sprint 2 variety setup tool (new)
 
-### 2. Build UGUI hierarchies in MenuScene + GameplayScene
+```
+Tools → Mythfall → Sprint 2 — Build Enemy Variety Prefabs
+```
 
-Each panel script has a `==================== UNITY HIERARCHY SETUP ====================` block at the top spelling out:
-- Required GameObject tree (parent paths, anchor positions, sizes)
-- Components to add per node
-- Which `LocalizedText` keys go on which `TMP_Text` children
-- Which Inspector serialized fields to assign to which GameObjects
+**Verify after run:**
+- `Resources/Prefabs/Enemies/Brute.prefab` (purple capsule, taller)
+- `Resources/Prefabs/Enemies/Shooter.prefab` (yellow slimmer, Muzzle child)
+- `Resources/Prefabs/Projectiles/EnemyProjectile.prefab` (orange sphere)
+- `Resources/Enemies/Brute_Data.asset` + `Shooter_Data.asset`
+- `Materials/Brute_Mat.mat` + `Shooter_Mat.mat` + `EnemyProjectile_Mat.mat`
 
-**Panels to build in MenuScene:**
-- `MainMenuPanel` ([MainMenuPanel.cs](Assets/Mythfall/Scripts/UI/Panels/MainMenuPanel.cs))
-- `CharacterSelectPanel` ([CharacterSelectPanel.cs](Assets/Mythfall/Scripts/UI/Panels/CharacterSelectPanel.cs))
-- `SettingsOverlay` ([SettingsOverlay.cs](Assets/Mythfall/Scripts/UI/Panels/SettingsOverlay.cs)) — higher canvas sort order so it sits on top of MainMenu
+### 3. Wire WaveSpawner in GameplayScene
 
-**Panels to build in GameplayScene:**
-- `HudPanel` ([HudPanel.cs](Assets/Mythfall/Scripts/UI/Panels/HudPanel.cs))
-- `GameOverPanel` ([GameOverPanel.cs](Assets/Mythfall/Scripts/UI/Panels/GameOverPanel.cs))
-- `VirtualJoystick` ([VirtualJoystick.cs](Assets/Mythfall/Scripts/Input/VirtualJoystick.cs))
+[WaveSpawner.cs](Assets/Mythfall/Scripts/Gameplay/WaveSpawner.cs) was refactored from single-enemy to weighted mix. The GameObject needs:
 
-**Both scenes need:**
-- Canvas (Screen Space - Overlay, Scale With Screen Size, Reference Resolution 1920x1080)
-- GraphicRaycaster (auto-added with Canvas)
-- EventSystem GameObject (auto-added with first Canvas)
+- **Separate from `[GameplaySpawner]`** — create `[WaveSpawner]` empty GameObject with `WaveSpawner` component
+- Add 4 child empty Transforms (SpawnPoint_0..3) around the map (e.g. ±8 on X and Z)
+- Inspector:
+  - `Spawn Points`: drag the 4 child Transforms
+  - `Enemy Entries` size 3: `Enemy_Swarmer` w3, `Enemy_Brute` w1, `Enemy_Shooter` w1
+  - `Enemies Per Wave` 5, `Wave Interval` 5, `Spawn On Start` ✓
+  - `Boss Spawn Time` 60 (or shorter for testing), `Boss Pool Key` Enemy_Rotwood, `Stop Waves On Boss` ✓
 
-### 3. Drop scene bootstrap GameObjects
+### 4. Smoke test the variety
 
-| Scene | GameObject | Component(s) | Inspector |
-|---|---|---|---|
-| MenuScene | `[SceneBootstrap]` | `SceneStateBinder` | InitialState = `MainMenu` |
-| GameplayScene | `[SceneBootstrap]` | `SceneStateBinder` | InitialState = `InRun` |
-| GameplayScene | `[GameplaySpawner]` | `GameplaySpawner` | spawnPoint = optional child Transform (origin if unset) |
+Press Play from MenuScene → Confirm Kai → expect:
+- Wave 1 (immediate): 5 enemies mix of Swarmer/Brute/Shooter
+- Swarmer chases continuously (re-chases if Kai walks away — Day 1 bug fix)
+- Brute approaches slow, telegraphs 0.8s, slam knockbacks Kai (player gets shoved ~2-3m)
+- Shooter kites 5-10m, fires orange projectile every 2s, projectile damages Kai
+- @60s boss trigger log: `[WaveSpawner] Boss trigger fired — listener should spawn 'Enemy_Rotwood'.` (Day 2 wires actual spawn)
 
-GameplayScene also needs `WaveSpawner` (already exists from Day 2) with spawn points around the map.
+### 5. Decide gravity-juice (pending)
 
-### 4. Smoke test the full loop
+User found during Day 1 testing: setting Rigidbody non-kinematic + UseGravity gives projectiles emergent push-back + ragdoll-on-death feel for free. Two paths to decide tomorrow:
 
-End-to-end DoD verification:
-
-1. Boot from BootstrapScene → splash → MenuScene → MainMenu visible
-2. Click **Play** → CharacterSelectPanel opens
-3. Click **Kai** card → highlight visible → click **Confirm** → fade → GameplayScene loads → Kai spawns at origin → joystick moves Kai → auto-attacks Swarmers → HP bar decreases on hit
-4. Die → DefeatState slow-mo → GameOverPanel
-5. Click **Retry** → GameplayScene reloads → Kai re-spawns → continue
-6. Die → Click **Hub** → MenuScene → MainMenu
-7. Click **Settings** → SettingsOverlay → switch **English** → all panel text reflows VN→EN with no `[missing.key]` and no clipping → switch back to **Tiếng Việt** → diacritics render correctly (Lôi Phong, Vọng Nguyệt)
-8. Quit Unity Play mode, re-enter → CharacterSelectPanel pre-selects last-saved character + language sticks
-
-If anything misbehaves, the first place to look is Console — every panel + state + spawner logs its lifecycle on entry.
+- **Path A** (recommend): update Sprint2Setup + Sprint2VarietySetup to default ALL enemy prefabs to non-kinematic + UseGravity + FreezeRotation X/Z + reasonable mass (Brute 4, Swarmer 2, Shooter 1.5) + drag 0.5
+- **Path B**: keep kinematic default, user toggles per-prefab manually
 
 ---
 
-## 🧠 KEY ARCHITECTURE DECISIONS THIS SESSION
+## 🧠 KEY CHANGES THIS SESSION
 
-All entries appended to [Docs/ARCHITECTURE_DECISIONS.md](Docs/ARCHITECTURE_DECISIONS.md) (most recent at top):
+### New code
 
-1. **Enemy player-reference resolution: lazy-fetch over event subscribe** — `EnemyBase.ResolvePlayerTransform()` handles either spawn order without sticky-event mechanics.
-2. **GameplaySpawner uses Instantiate, not Bill.Pool** — Rule 3 exception documented for singleton scene-bound entities.
-3. **Sprint2Setup prefab generation tool fixes** — config baked into prefab asset at build time, not on scene instances after instantiation.
+```
+Assets/Mythfall/Scripts/
+  Enemy/
+    EnemyBase.cs              ← REFACTORED — state machine (Idle/Chase/Attack/Stunned/Dying)
+                                + TransitionTo + OnStateEnter/Exit + abstract TickState
+                                + SetStatMultipliers (for EliteModifier)
+    SwarmerEnemy.cs           ← MIGRATED to state machine + stuck-attack bug fixed
+                                (TickAttack re-checks range after cooldown; OnAttackHit
+                                always transitions back to Chase regardless of hit)
+    BruteEnemy.cs             ← NEW — telegraph 0.8s + hit window 0.2s + recovery 0.5s
+                                + AoE 2m slam + knockback player 10f
+    ShooterEnemy.cs           ← NEW — kite 5-10m + projectile fire every 2s
+    EliteModifier.cs          ← NEW — x3 HP / x2 dmg / 1.3x scale / red emission
+    EnemyProjectile.cs        ← NEW — pooled ammo for Shooter
+  Polish/
+    KnockbackReceiver.cs      ← NEW — applies impulse via CharacterController.Move + decay
+  Gameplay/
+    WaveSpawner.cs            ← REFACTORED — WaveEntry[] weighted mix + boss timer fires
+                                BossSpawnTriggeredEvent
+    GameplaySpawner.cs        ← (unchanged from Sprint 1)
+    CameraFollow.cs           ← Bill.IsReady gate fix in OnDisable
+  Core/
+    Events/GameEvents.cs      ← +BossSpawnTriggeredEvent +ScreenShakeEvent
+    Bootstrap/GameBootstrap.cs ← shared TryRegister helper, 5 pools, Bill.IsReady gate
+                                  fix in OnEnable
+  UI/Panels/HudPanel.cs       ← Bill.IsReady gate fix in OnDestroy
+  Editor/
+    Sprint2Setup.cs           ← +KnockbackReceiver in BuildPlayerPrefab
+    Sprint2VarietySetup.cs    ← NEW tool — scaffolds Brute + Shooter + EnemyProjectile
+                                  prefabs + materials + EnemyDataSO assets
+```
 
-UGUI route (custom `MythfallPanelRegistry`, NOT `Bill.UI`/UI Toolkit) was selected at the top of the session per user direction. Each panel inherits `MythfallPanelBase` which uses `CanvasGroup` (not `SetActive`) for hide so panels stay registered while invisible.
+### New localization
+
+- `enemy.brute.{name,desc}` — "Mộc Đoạt Tử" / "Wood-Render"
+- `enemy.shooter.{name,desc}` — "Cung Ảo Quỷ" / "Spectral Archer"
+- `enemy.rotwood.{name,desc}` — Day 2 boss
+
+### Bug fixes during Day 1
+
+1. **SwarmerEnemy stuck in Attack state when player dodges out of range** — TickAttack now re-checks distance after cooldown; OnAttackHit always TransitionsTo(Chase) regardless of whether damage applied.
+2. **`Bill.Events?` null-conditional logs SERVICE NOT FOUND error** — the getter calls ServiceLocator.Get which logs error BEFORE returning null. Null check is too late. Fixed in GameBootstrap.OnEnable, CameraFollow.OnDisable, HudPanel.OnDestroy by gating on `Bill.IsReady` instead. **5-6 other entry points (Awake/Start subscribing to GameReady) still use the pattern but only log on cold-boot race — cosmetic, defer to Sprint 4.**
 
 ---
 
@@ -100,14 +128,12 @@ UGUI route (custom `MythfallPanelRegistry`, NOT `Bill.UI`/UI Toolkit) was select
 
 | Issue | Plan |
 |---|---|
-| HudPanel pause button is a no-op log | Sprint 4 polish — implement pause overlay (Time.timeScale=0, settings reachable, resume) |
-| GameOverPanel stats display empty (time/wave/kills/level) | Sprint 4 polish — needs `RunStatsTracker` to populate on death |
-| 0.3s iFrame absorbs simultaneous Swarmer hits | By design Day 2; revisit Sprint 2 if combat feels too forgiving |
-| Animation invisible | Placeholder Animator clips empty. Real anim arrives Sprint 2. |
-| 3 `No Theme Style Sheet set to PanelSettings` warnings on Bill UI Toolkit | We don't use Bill.UI; warnings are harmless. Defer Sprint 4. |
-| BillInspector duplicate menu item warning | Internal, ignore. |
-| `ModularTopDown.PlayerInputHandler` legacy `Input.GetAxisRaw` | We use `MobileInputManager` + `VirtualJoystick`; framework's handler is unused. |
-| APK build / Android device test | Deferred per user request. |
+| Stale `Bill.Events?.Subscribe` pattern in GameplaySpawner / SceneStateBinder / CombatDebugProbe / LocalizedText / RangedCombat (Pool variant) | Sprint 4 polish — cosmetic, only logs on cold-boot race timing |
+| Elite spawn rolling not wired in WaveSpawner | Day 2 or Day 3 — needs design: pool-per-elite OR runtime AddComponent (and reset on pool return) |
+| BossEnemy + VictoryState + BossSpawnTriggeredEvent listener | Day 2 |
+| HitStop / ScreenShake / DamageNumber / MaterialFlash | Day 3 polish layer |
+| HudPanel pause button no-op log | Sprint 4 |
+| GameOverPanel stats fields empty (time/wave/kills) | Sprint 4 — needs RunStatsTracker |
 
 ---
 
@@ -115,33 +141,22 @@ UGUI route (custom `MythfallPanelRegistry`, NOT `Bill.UI`/UI Toolkit) was select
 
 ```
 Assets/Mythfall/Scripts/
-  Core/Bootstrap/GameBootstrap.cs            # RegisterPools + RegisterGameLayer (Inventory + 4 states)
-  Core/Events/GameEvents.cs                  # +CharacterSpawnedEvent
-  Core/States/MythfallStates.cs              # 4 states fully wired
-  Core/States/SceneStateBinder.cs            # per-scene initial state binder (enum)
-  Core/Localization/LocalizationService.cs   # unchanged
-  Characters/{CharacterStats, RuntimeStats, CharacterDataSO}.cs
-  Enemy/{EnemyDataSO, EnemyBase, SwarmerEnemy}.cs       # EnemyBase.ResolvePlayerTransform added
-  Gameplay/{Projectile, WaveSpawner, GameplaySpawner}.cs   # GameplaySpawner new
-  Input/{MobileInputManager, VirtualJoystick}.cs        # VirtualJoystick new
-  Inventory/{PlayerData, InventoryService}.cs           # both new
-  Player/{PlayerBase, PlayerHealth, PlayerFacing, TargetSelector,
-          PlayerCombatBase, MeleeCombat, RangedCombat,
-          MeleePlayer, RangedPlayer, HitboxRelay}.cs
-  Skills/SkillCore.cs                        # stub — Sprint 3
-  UI/{LocalizedText, LocalizationTester, MythfallPanelRegistry, MythfallPanelBase}.cs
-  UI/Panels/{MainMenu, CharacterSelect, Hud, GameOver, SettingsOverlay}Panel.cs
-  Editor/{Sprint0Setup, Sprint1Setup, Sprint2Setup}.cs   # Sprint2Setup root-cause fixed
+  Enemy/{EnemyBase, SwarmerEnemy, BruteEnemy, ShooterEnemy, EnemyDataSO,
+         EliteModifier, EnemyProjectile}.cs
+  Polish/KnockbackReceiver.cs
+  Gameplay/{Projectile, WaveSpawner, GameplaySpawner, CameraFollow}.cs
+  Editor/{Sprint0Setup, Sprint1Setup, Sprint2Setup, Sprint2VarietySetup}.cs
 
 Assets/Mythfall/Resources/
-  Localization/lang_{vi,en}.json              # all Day 3 keys already present
+  Localization/lang_{vi,en}.json
   Characters/{Kai,Lyra}_Data.asset
-  Enemies/Swarmer_Data.asset
-  Prefabs/Enemies/Swarmer.prefab              # has Kinematic Rigidbody
-  Prefabs/Projectiles/Arrow.prefab
+  Enemies/{Swarmer,Brute,Shooter}_Data.asset
+  Prefabs/Enemies/{Swarmer, Brute, Shooter}.prefab
+  Prefabs/Projectiles/{Arrow, EnemyProjectile}.prefab
 
-Assets/Mythfall/Prefabs/Players/{Kai,Lyra}.prefab   # groundLayer.m_Bits = 1 (Default)
-Assets/Mythfall/Scenes/{Bootstrap,Menu,Gameplay}Scene.unity
+Assets/Mythfall/Prefabs/Players/{Kai, Lyra}.prefab    ← now include KnockbackReceiver
+                                                        (regenerate via Sprint 2 setup)
+Assets/Mythfall/Scenes/{Bootstrap, Menu, Gameplay}Scene.unity
 ```
 
 ---
@@ -153,21 +168,18 @@ Assets/Mythfall/Scenes/{Bootstrap,Menu,Gameplay}Scene.unity
 Tools → Mythfall → Sprint 0 — Run Setup
 Tools → Mythfall → Sprint 0 — Verify Setup
 Tools → Mythfall → Sprint 1 — Create Character Data
-Tools → Mythfall → Sprint 2 — Build Placeholder Prefabs
-```
-
-### Find architectural breadcrumbs
-```
-grep -rn "MYTHFALL ADDITIVE" Assets/Mythfall/Scripts/LocomotionModular/
+Tools → Mythfall → Sprint 2 — Build Placeholder Prefabs           ← regen Kai/Lyra
+Tools → Mythfall → Sprint 2 — Setup GameplayScene for Test         ← (Day 2 test layout — skip if using WaveSpawner)
+Tools → Mythfall → Sprint 2 — Build Enemy Variety Prefabs          ← Day 1 NEW
 ```
 
 ### Wipe save data (test first-launch flow)
-Edit → Clear All PlayerPrefs (Unity menu), or `PlayerPrefs.DeleteAll()` from a debug button.
+PlayerPrefs.DeleteAll() from a debug button, or Edit → Clear All PlayerPrefs.
 
 ---
 
 ## 🛌 GOOD NIGHT
 
-Day 3 code is fully signed off. The next session is Editor-only — build hierarchies per header specs, drop scene bootstraps, smoke test the loop. If it all works, Sprint 1 closes and you're starting Sprint 2 (combat variety + boss + polish layer 1) per [Sprints/SPRINT_2_COMBAT_FEEL.md](Sprints/SPRINT_2_COMBAT_FEEL.md).
+Day 1 code is fully signed off. The next session is Editor verification + decision on gravity-juice path. If smoke test passes, start Day 2 (BossEnemy + VictoryState + BossSpawnTriggeredEvent listener).
 
-If something compiles but behaves weird → check [Docs/ARCHITECTURE_DECISIONS.md](Docs/ARCHITECTURE_DECISIONS.md) first, then this HANDOFF's "Known Carry-Overs" table.
+If something behaves weird → check [Docs/ARCHITECTURE_DECISIONS.md](Docs/ARCHITECTURE_DECISIONS.md) first, then this HANDOFF's "Known Carry-Overs" table.

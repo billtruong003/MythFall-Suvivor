@@ -76,12 +76,14 @@ namespace Mythfall.UI.Panels
         {
             if (pauseButton != null) pauseButton.onClick.RemoveListener(OnPauseClicked);
             // Unsubscribe defensively — OnPanelHidden may not have run if panel is destroyed mid-show.
-            if (_subscribed)
+            // Gate on Bill.IsReady because OnDestroy may fire after service teardown
+            // (stop Play); the Bill.Events getter logs an error before returning null.
+            if (_subscribed && Bill.IsReady)
             {
-                Bill.Events?.Unsubscribe<PlayerDamagedEvent>(OnPlayerDamaged);
-                Bill.Events?.Unsubscribe<CharacterSpawnedEvent>(OnCharacterSpawned);
-                _subscribed = false;
+                Bill.Events.Unsubscribe<PlayerDamagedEvent>(OnPlayerDamaged);
+                Bill.Events.Unsubscribe<CharacterSpawnedEvent>(OnCharacterSpawned);
             }
+            _subscribed = false;
         }
 
         protected override void OnPanelShown()

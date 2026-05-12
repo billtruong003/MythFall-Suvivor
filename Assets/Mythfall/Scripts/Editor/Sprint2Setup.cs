@@ -10,6 +10,7 @@ using Mythfall.Characters;
 using Mythfall.Enemy;
 using Mythfall.Gameplay;
 using Mythfall.Player;
+using Mythfall.Polish;
 
 namespace Mythfall.EditorTools
 {
@@ -394,6 +395,7 @@ namespace Mythfall.EditorTools
             root.AddComponent<PlayerHealth>();
             root.AddComponent<TargetSelector>();
             root.AddComponent<PlayerFacing>();
+            root.AddComponent<KnockbackReceiver>();
 
             // Visual mesh child (capsule)
             var visual = GameObject.CreatePrimitive(PrimitiveType.Capsule);
